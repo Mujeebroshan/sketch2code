@@ -20,7 +20,7 @@ else:
 genai.configure(api_key=api_key)
 
 # Using Gemini 2.0 Flash to avoid daily limits of the 'Preview' models
-model = genai.GenerativeModel('gemini-3-flash-preview')
+model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
 SYSTEM_PROMPT = """You are an expert Tailwind CSS developer. You are strictly forbidden from generating markdown code blocks. You must return a raw HTML string. The HTML must be a single file containing a standard HTML5 boilerplate, a script tag importing Tailwind CSS via CDN, and the body content derived from the image. Use FontAwesome via CDN for icons. Use 'https://placehold.co/600x400' for placeholder images."""
 
