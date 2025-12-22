@@ -20,7 +20,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // URL CONFIG
-  const BACKEND_URL = "https://sketch2code-v2-backend.onrender.com";
+  const BACKEND_URL = "https://sketch2code-xi55.onrender.com";
 
   // --- SMART LOADING LOGIC ---
   useEffect(() => {
