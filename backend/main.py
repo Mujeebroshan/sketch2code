@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-import services.gemini_service # <--- You imported the MODULE here
+import services.gemini_service 
 
 app = FastAPI()
 
@@ -22,11 +22,16 @@ async def generate_code(file: UploadFile = File(...)):
         if not content_type.startswith("image/"):
              raise HTTPException(status_code=400, detail="Invalid file type.")
              
-        # --- FIX IS HERE ---
-        # We must use 'services.gemini_service.' before the function name
-        generated_html = services.gemini_service.analyze_image(content, content_type)
+        # ✅ CALL THE SERVICE
+        # Now returns a dictionary: { "code": "...", "model": "gemini-2.5-pro" }
+        result = services.gemini_service.analyze_image(content, content_type)
         
-        return {"html": generated_html}
+        # ✅ RETURN BOTH HTML AND MODEL NAME
+        # We map 'code' -> 'html' so your existing frontend keeps working!
+        return {
+            "html": result["code"], 
+            "model": result["model"]
+        }
         
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -38,8 +43,15 @@ async def refine_code_endpoint(
     instruction: str = Form(...)
 ):
     try:
-        # This one was already correct!
-        updated_html = services.gemini_service.refine_code(code, instruction)
-        return {"html": updated_html}
+        # ✅ CALL THE SERVICE
+        # Now returns a dictionary: { "code": "...", "model": "..." }
+        result = services.gemini_service.refine_code(code, instruction)
+        
+        # ✅ RETURN BOTH
+        return {
+            "html": result["code"], 
+            "model": result["model"]
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
