@@ -5,11 +5,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # --- SETUP ---
+# Robustly find the .env file (Goes up one level from 'backend' to root)
 current_file = Path(__file__).resolve()
 backend_folder = current_file.parent.parent
 env_path = backend_folder / ".env"
 load_dotenv(dotenv_path=env_path)
 
+# Configure Gemini
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     print("❌ API Key NOT Found! Check your .env file.")
@@ -18,22 +20,37 @@ else:
 
 genai.configure(api_key=api_key)
 
-# --- MODEL LIST ---
+# --- 🛡️ THE POWER-RANKED FALLBACK LIST ---
+# Ordered by Intelligence/Capability (Smartest -> Fastest)
+# This ensures complex logic (JS sliders, layout) works correctly.
 MODEL_LIST = [
-    "gemini-3-flash-preview", 
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemma-3-27b-it",
-    "gemini-3-pro-preview",
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
-    "gemini-pro"
+    # --- TIER 1: THE BRAINIACS (Highest Reasoning & Coding Ability) ---
+    "gemini-2.5-pro",                   # Current Stable Flagship (Best for Code)
+    "gemini-3-pro-preview",             # Next-Gen Reasoning
+    "gemini-exp-1206",                  # Experimental High-Reasoning Model
+    "gemini-1.5-pro",                   # The Reliable Expert (Great Fallback)
+
+    # --- TIER 2: HEAVYWEIGHT OPEN MODELS ---
+    "gemma-3-27b-it",                   # Largest Gemma (Very smart)
+    "gemma-3-12b-it",                   # Balanced High-Performance
+    
+    # --- TIER 3: SPEED & EFFICIENCY (Smart but Optimized) ---
+    "gemini-2.5-flash",                 # Best "Flash" model currently
+    "gemini-3-flash-preview",           # Newest Flash Preview
+    "gemini-1.5-flash",                 # Standard Daily Driver
+    "gemini-flash-latest",              # Points to the current best Flash
+    
+    # --- TIER 4: EXPERIMENTAL / SPECIALIZED ---
+    "gemini-2.0-flash-exp",             # Experimental Flash
+    "gemini-robotics-er-1.5-preview",   # Surprisingly good at logic
+    
+    # --- TIER 5: SAFETY NET (Legacy) ---
+    "gemini-pro",                       # Old 1.0 Pro (If everything else fails)
+    "gemma-3-4b-it"                     # Lightweight backup
 ]
 
-# --- SYSTEM PROMPT (DEPLOY-READY MODE) ---
+# --- 🧠 SUPERIOR SYSTEM PROMPT (DEPLOY-READY) ---
+# Demands working JS, specific CDNs, and no markdown blocks.
 SYSTEM_PROMPT = """
 You are an expert Full-Stack Web Developer.
 Goal: Convert the design into a SINGLE, DEPLOY-READY HTML file.
@@ -54,16 +71,18 @@ CRITICAL RULES:
 # --- HELPER FUNCTIONS ---
 
 def clean_code(text):
-    """Removes markdown backticks."""
+    """Removes markdown backticks if Gemini adds them."""
     if not text: return ""
-    text = text.strip()
-    text = re.sub(r'^```html\s*', '', text)
+    # Remove ```html ... ``` or just ``` ... ```
+    text = re.sub(r'^```html\s*', '', text.strip())
+    text = re.sub(r'^```\s*', '', text.strip())
     text = re.sub(r'\s*```$', '', text)
     return text.strip()
 
 def generate_with_fallback(inputs):
-    """Tries models one by one."""
+    """Tries models one by one from MODEL_LIST until one succeeds."""
     last_error = None
+    
     for model_name in MODEL_LIST:
         try:
             print(f"🔄 Trying model: {model_name}...")
@@ -71,10 +90,16 @@ def generate_with_fallback(inputs):
             response = model.generate_content(inputs)
             print(f"✅ Success with {model_name}!")
             return response.text
+            
         except Exception as e:
+            # We catch ALL errors here so the loop never breaks until the end
+            # This fixes the "404 Not Found" and "Quota" errors.
+            print(f"❌ {model_name} Failed.") 
             last_error = e
             continue 
-    raise Exception(f"All models failed. Last Error: {str(last_error)}")
+            
+    # If we run out of models
+    raise Exception(f"All {len(MODEL_LIST)} models failed. Last Error: {str(last_error)}")
 
 # --- MAIN FUNCTIONS ---
 
@@ -94,7 +119,7 @@ def refine_code(current_code: str, instruction: str) -> str:
     USER INSTRUCTION:
     {instruction}
     
-    Return the FULL UPDATED code.
+    Return the UPDATED full HTML code.
     """
     generated_code = generate_with_fallback(prompt)
     return clean_code(generated_code)
